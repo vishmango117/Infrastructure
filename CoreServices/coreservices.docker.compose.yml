@@ -1,0 +1,73 @@
+services:
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    ports:
+      - 32400:32400
+    environment:
+      - PUID=1000
+      - PGID=997
+      - TZ=Asia/Singapore
+      - VERSION=docker
+    networks:
+      - media
+      - proxy
+    # Labels for Traefik Reverse Proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.plex.entrypoints=http"
+      - "traefik.http.routers.plex.rule=Host(`plex.example.internal`)"
+      - "traefik.http.middlewares.plex-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.plex.middlewares=plex-https-redirect"
+      - "traefik.http.routers.plex-secure.entrypoints=https"
+      - "traefik.http.routers.plex-secure.rule=Host(`plex.example.internal`)"
+      - "traefik.http.routers.plex-secure.tls=true"
+      - "traefik.http.routers.plex-secure.service=plex"
+      - "traefik.http.services.plex.loadbalancer.server.port=32400"
+      - "traefik.docker.network=proxy"
+    # Insert your NAS Volumes or folders with your media
+    volumes:
+      - ./Plex/:/config
+      - "/home/administrator/Volumes/TV:/tv"
+      - "/home/administrator/Volumes/Movies:/movies"
+      - "/home/administrator/Volumes/Movies/optimized:/optimized"
+    restart: unless-stopped
+  books:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: books
+    networks:
+      - bookServer
+      - proxy
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Singapore
+      - DOCKER_MODS=linuxserver/mods:universal-calibre #optional
+      - OAUTHLIB_RELAX_TOKEN_SCOPE=1 #optional
+      - ADVERTISE_IP="https://books.example.internal"
+    volumes:
+      - ./BookServer/Calibre-Web/config:/config
+      - ./BookServer/Calibre-Web/books:/books
+    ports:
+      - 8090:8083
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.books.entrypoints=http"
+      - "traefik.http.routers.books.rule=Host(`books.example.internal`)"
+      - "traefik.http.middlewares.books-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.books.middlewares=books-https-redirect"
+      - "traefik.http.routers.books-secure.entrypoints=https"
+      - "traefik.http.routers.books-secure.rule=Host(`books.example.internal`)"
+      - "traefik.http.routers.books-secure.tls=true"
+      - "traefik.http.routers.books-secure.service=books"
+      - "traefik.http.services.books.loadbalancer.server.port=8083"
+      - "traefik.docker.network=proxy"
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
+  media:
+    name: mediaNetwork
+  bookServer:
+    name: bookNetwork
