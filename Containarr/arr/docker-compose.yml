@@ -1,0 +1,110 @@
+# Containarr — the arr stack: Sonarr, Radarr, qBittorrent, Jackett, Seerr.
+#
+# This file is STRUCTURE ONLY: every tunable value comes from ./arr/.env
+# (copy .env.example to .env and adjust). Container-side ports are fixed facts
+# that must match $services in ../proxy/config/config.yml — they are not config.
+#
+# Start:  docker compose up -d
+# The external network `arr-net` is created by ansible/playbook.yml.
+
+name: containarr
+
+x-common-env: &common-env
+  PUID: ${PUID:?set in .env}
+  PGID: ${PGID:?set in .env}
+  TZ: ${TZ:?set in .env}
+
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    environment: *common-env
+    volumes:
+      - ./data/sonarr:/config
+      - ${MEDIA_PATH:?set in .env}:/media
+      - ${DOWNLOADS_PATH:?set in .env}:/downloads
+    ports:
+      - "${SONARR_PORT:?set in .env}:8989"
+    networks: [arr-net]
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment: *common-env
+    volumes:
+      - ./data/radarr:/config
+      - ${MEDIA_PATH:?set in .env}:/media
+      - ${DOWNLOADS_PATH:?set in .env}:/downloads
+    ports:
+      - "${RADARR_PORT:?set in .env}:7878"
+    networks: [arr-net]
+
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    restart: unless-stopped
+    environment: *common-env
+    volumes:
+      - ./data/jackett:/config
+    ports:
+      - "${JACKETT_PORT:?set in .env}:9117"
+    networks: [arr-net]
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      # Fixed internal WebUI port; must match $services in proxy/config/config.yml.
+      WEBUI_PORT: "8080"
+      TORRENTING_PORT: ${P2P_PORT:?set in .env}
+    volumes:
+      - ./data/qbittorrent:/config
+      - ${DOWNLOADS_PATH:?set in .env}:/downloads
+      - ${MEDIA_PATH:?set in .env}:/media
+    ports:
+      # WebUI is normally reached through Traefik; the direct port is kept for recovery.
+      - "${QBITTORRENT_WEBUI_PORT:?set in .env}:8080"
+      - "${P2P_PORT:?set in .env}:${P2P_PORT:?set in .env}"
+      - "${P2P_PORT:?set in .env}:${P2P_PORT:?set in .env}/udp"
+    networks: [arr-net]
+
+  seerr:
+    # Official unified image of Overseerr + Jellyseerr — sign in with your
+    # Jellyfin (or Plex) account; existing Overseerr/Jellyseerr data auto-migrates.
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    init: true                       # the official image ships no init process
+    restart: unless-stopped
+    user: "${PUID:?set in .env}:${PGID:?set in .env}"   # must be able to write ./data/seerr
+    environment:
+      TZ: ${TZ:?set in .env}
+      LOG_LEVEL: ${SEERR_LOG_LEVEL:?set in .env}
+    volumes:
+      - ./data/seerr:/app/config
+    ports:
+      - "${SEERR_PORT:?set in .env}:5055"   # container always listens on 5055
+    networks: [arr-net]
+
+  # OPTIONAL media server — only needed if you don't already run a Jellyfin/Plex
+  # server for Seerr to sign in against. If you add it, also append
+  # `"jellyfin" "8096"` to $services in proxy/config/config.yml and set
+  # JELLYFIN_PORT in .env.
+  # jellyfin:
+  #   image: lscr.io/linuxserver/jellyfin:latest
+  #   container_name: jellyfin
+  #   restart: unless-stopped
+  #   environment: *common-env
+  #   volumes:
+  #     - ./data/jellyfin:/config
+  #     - ${MEDIA_PATH}:/media
+  #   ports:
+  #     - "${JELLYFIN_PORT}:8096"
+  #   networks: [arr-net]
+
+networks:
+  arr-net:
+    external: true

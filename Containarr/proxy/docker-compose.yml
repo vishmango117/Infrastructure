@@ -1,0 +1,38 @@
+# Containarr — Traefik reverse proxy.
+#
+# This file is STRUCTURE ONLY: DOMAIN_NAME / SUBDOMAIN_NAME / host ports come
+# from ./proxy/.env (copy .env.example to .env and adjust). Traefik's own
+# config lives in ./config/traefik.yml (static) and ./config/config.yml
+# (dynamic Go template -> routers for every service; fixed container ports).
+#
+# Start:  docker compose up -d
+
+name: containarr-proxy
+
+services:
+  reverse-proxy:
+    image: traefik:v3.7
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - --configFile=/traefik.yml
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME:?set in .env}
+      SUBDOMAIN_NAME: ${SUBDOMAIN_NAME:?set in .env}
+      TZ: ${TZ:?set in .env}
+    volumes:
+      - ./config/traefik.yml:/traefik.yml:ro
+      - ./config/config.yml:/config.yml:ro
+      - ./config/certs:/certs:ro
+      - ./config/acme.json:/acme.json
+    ports:
+      - "${HTTP_PORT:?set in .env}:80"
+      - "${HTTPS_PORT:?set in .env}:443"
+      # -- (Optional) Insecure dashboard/API on a host port — avoid in production;
+      #    the dashboard is already served via https://${SUBDOMAIN_NAME}.${DOMAIN_NAME}.
+      # - "8082:8080"
+    networks: [arr-net]
+
+networks:
+  arr-net:
+    external: true

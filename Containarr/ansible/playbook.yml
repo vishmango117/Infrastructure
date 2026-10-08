@@ -1,0 +1,135 @@
+---
+# Containarr base host setup — Ubuntu LTS (22.04 / 24.04).
+#
+# Installs Docker Engine + Compose v2 from the official Docker apt repo,
+# creates the base application user, builds the stack directory tree and
+# creates the shared external docker network that Traefik routes through.
+#
+# Usage:
+#   ansible-galaxy install -r ansible/requirements.yml
+#   ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --ask-become-pass
+#
+# Override variables inline, e.g.:
+#   ... -e app_user=administrator -e stack_root=/srv/containarr
+
+- name: Prepare Ubuntu LTS host for the Containarr Docker stack
+  hosts: containarr
+  become: true
+  gather_facts: true
+
+  vars:
+    # Base user that owns the stack directories and runs the compose projects.
+    app_user: arruser
+    # Optional crypt()-style password hash ("!" locks the account). Leave empty
+    # to leave it unset — use SSH keys for login in that case.
+    app_user_password_hash: ""
+    add_app_user_to_sudo: true
+    # External docker network shared by Traefik and every stack container.
+    # MUST match `networks.arr-net` in the arr/ and proxy/ compose files;
+    # Traefik resolves service names (sonarr, radarr, …) over this network's
+    # built-in DNS.
+    arr_network: arr-net
+    stack_root: /opt/containarr
+
+  tasks:
+    - name: Install prerequisite packages
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+        state: present
+        pkg:
+          - ca-certificates
+          - curl
+          - gnupg
+          - acl
+
+    - name: Remove obsolete/conflicting Docker packages (per Docker docs)
+      ansible.builtin.apt:
+        state: absent
+        pkg:
+          - docker.io
+          - docker-doc
+          - podman-docker
+          - containerd
+          - runc
+
+    - name: Ensure /etc/apt/keyrings exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker apt repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ ansible_facts['architecture'] }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/ubuntu
+          {{ ansible_facts['distribution_release'] }} stable
+        filename: docker
+        state: present
+
+    - name: Install Docker Engine, CLI, buildx and Compose plugin
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+        state: present
+        pkg:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+
+    - name: Enable and start Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create base application user (member of docker group)
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        shell: /bin/bash
+        groups: "{{ (['docker'] + (['sudo'] if add_app_user_to_sudo | bool else [])) | join(',') }}"
+        append: true
+
+    - name: Set application user password (only when a hash was provided)
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        password: "{{ app_user_password_hash }}"
+        update_password: always
+      when: app_user_password_hash | length > 0
+
+    - name: Create stack directory tree owned by the application user
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "0755"
+      loop:
+        - "{{ stack_root }}/arr/data/sonarr"
+        - "{{ stack_root }}/arr/data/radarr"
+        - "{{ stack_root }}/arr/data/qbittorrent"
+        - "{{ stack_root }}/arr/data/jackett"
+        - "{{ stack_root }}/arr/data/seerr"
+        - "{{ stack_root }}/media/tv"
+        - "{{ stack_root }}/media/movies"
+        - "{{ stack_root }}/downloads"
+
+    - name: Check whether the shared Docker network already exists
+      community.docker.docker_network_info:
+        name: "{{ arr_network }}"
+      register: arr_net
+
+    - name: Create shared Docker network ({{ arr_network }})
+      community.docker.docker_network:
+        name: "{{ arr_network }}"
+      when: not arr_net.exists

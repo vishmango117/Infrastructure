@@ -1,0 +1,2 @@
+# mkcert-generated key pairs go here (see traefik.yml Option A).
+*.pem

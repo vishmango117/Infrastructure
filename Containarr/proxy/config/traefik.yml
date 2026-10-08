@@ -1,0 +1,67 @@
+# Traefik STATIC configuration for the Containarr stack.
+#
+# Note: Go templating does NOT work in this file — dynamic routing (host names)
+# lives in ./config.yml, which IS templated and reads DOMAIN_NAME from the
+# container environment (see ../docker-compose.yml).
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+log:
+  level: INFO
+
+accessLog: {}
+
+api:
+  dashboard: true
+  # The dashboard is served only through the router defined in config.yml
+  # (https://traefik.example.internal), never via an exposed insecure port.
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      # Everything on :80 redirects to https unconditionally.
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+
+# example.internal is not publicly resolvable, so public ACME (Let's Encrypt)
+# cannot validate it. Pick ONE option below and uncomment:
+#
+# Option A — local CA certs generated with mkcert (recommended for .internal):
+#   curl -LO https://github.com/FiloSottile/mkcert/releases/latest/download/mkcert-linux-arm64 \
+#     || true   # use the linux-amd64 build on x86 hosts
+#   chmod +x mkcert-linux-* && sudo mv mkcert-linux-* /usr/local/bin/mkcert
+#   mkcert -install
+#   mkcert example.internal '*.example.internal'
+#   # -> copies the two .pem files into ./certs/ and names them as below
+# certificates:
+#   certificates:
+#     - certFile: /certs/example.internal+2.pem
+#       keyFile: /certs/example.internal+2-key.pem
+#
+# Option B — leave this block commented out: Traefik serves an auto-generated
+#            self-signed certificate (clients will show a warning until they
+#            trust the mkcert root CA).
+#
+# Option C — real ACME, only if you switch to a publicly resolvable domain:
+# certificates:
+#   defaults:
+#     stores:
+#       default:
+#         certificate:
+#           acme:
+#             email: admin@example.com
+#             storage: /acme.json
+#             dnsChallenge:
+#               provider: cloudflare
+
+providers:
+  file:
+    filename: /config.yml
+    watch: true

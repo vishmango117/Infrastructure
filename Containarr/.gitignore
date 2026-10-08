@@ -1,0 +1,9 @@
+# live env files (copy from .env.example)
+arr/.env
+proxy/.env
+
+# runtime container data on the server
+arr/data/
+
+# private keys / issued certs
+proxy/config/certs/*.pem

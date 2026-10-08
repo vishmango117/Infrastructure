@@ -1,0 +1,49 @@
+{{- /*
+Traefik DYNAMIC configuration — a Go template rendered at load time.
+DOMAIN_NAME / SUBDOMAIN_NAME are injected by docker-compose from ../.env.
+
+$services maps container name -> CONTAINER port (fixed; the host-side ports in
+arr/.env only remap host:container and never affect these internal URLs).
+Services are plain file-based load balancers pointing at container names —
+Traefik resolves them by DNS on the shared network (arr-net), so NO Docker
+socket is needed. Works identically with Docker or Podman.
+
+To expose another container on arr-net: add it to $services below
+(container name: port); the router + TLS domain are generated automatically.
+*/ -}}
+{{- $domain := env "DOMAIN_NAME" -}}
+{{- $sub := env "SUBDOMAIN_NAME" -}}
+{{- $services := dict
+  "sonarr" "8989"
+  "radarr" "7878"
+  "qbittorrent" "8080"
+  "jackett" "9117"
+  "seerr" "5055"
+-}}
+http:
+  services:
+    {{- range $svc, $port := $services }}
+    {{ $svc }}:
+      loadBalancer:
+        servers:
+          - url: "http://{{ $svc }}:{{ $port }}"
+    {{- end }}
+  routers:
+    {{ $sub }}:
+      rule: Host(`{{ $sub }}.{{ $domain }}`)
+      entryPoints: [websecure]
+      service: api@internal
+      tls:
+        domains:
+          - main: "{{ $sub }}.{{ $domain }}"
+            sans: ["*.{{ $domain }}"]
+    {{- range $svc, $port := $services }}
+
+    {{ $svc }}:
+      rule: Host(`{{ $svc }}.{{ $domain }}`)
+      entryPoints: [websecure]
+      service: {{ $svc }}
+      tls:
+        domains:
+          - main: "{{ $svc }}.{{ $domain }}"
+    {{- end }}
