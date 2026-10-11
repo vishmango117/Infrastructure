@@ -1,0 +1,8 @@
+# Copy this file to hosts.yml and replace all example values.
+all:
+  children:
+    linux_servers:
+      hosts:
+        example-host:
+          ansible_host: 192.0.2.20
+          ansible_user: replace_me

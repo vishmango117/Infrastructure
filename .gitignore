@@ -1,1 +1,47 @@
+# Secrets and local configuration
 .env
+.env.*
+!.env.example
+*.secret
+secrets/
+
+# Ansible
+*.retry
+**/inventory/hosts.yml
+**/inventory/hosts.yaml
+**/host_vars/*.yml
+!**/host_vars/*.example.yml
+vault-password-file
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Runtime data
+acme.json
+*.pem
+*.key
+kubeconfig*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Private inventory (real IPs, MACs, VM IDs, hostnames)
+docs/private/
+
+# Wayfinder drafts (published to GitHub issues after review)
+.wayfinder/

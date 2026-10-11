@@ -1,0 +1,10 @@
+---
+# Starter playbook. Add roles only after reviewing their impact.
+- name: Configure managed Linux hosts
+  hosts: linux_servers
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Report managed host
+      ansible.builtin.debug:
+        msg: "Ansible can reach {{ inventory_hostname }}"
