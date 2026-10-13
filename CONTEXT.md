@@ -11,7 +11,7 @@ A top-level area of the repository: AWS, Homelab, Docs, or Labs.
 _Avoid_: section, area, zone
 
 **Homelab**:
-The three-node Proxmox cluster named Sol and every VM it hosts. Real node names live in the private Masterlist.
+The three-node Proxmox cluster and every VM it hosts. Public text may name the node `pve` (Proxmox's default name); the other node names live in the private Masterlist.
 _Avoid_: home server, Cluster A, Cluster B
 
 **AWS**:
