@@ -1,0 +1,8 @@
+#!/bin/sh
+# Blocks commit messages that contain secrets or private environment details.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "commit-msg: gitleaks not installed (brew install gitleaks)" >&2
+  exit 1
+fi
+config=$(sh scripts/gitleaks-config.sh)
+exec gitleaks stdin --redact --no-banner --config "$config" < "$1"

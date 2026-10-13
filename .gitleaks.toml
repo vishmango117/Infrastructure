@@ -11,6 +11,13 @@ description = "RFC 1918 IPv4 address. Use 192.0.2.0/24 (documentation range) in 
 regex = '''\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b'''
 
 [[rules]]
+id = "tailscale-ipv4"
+description = "Tailscale (CGNAT 100.64.0.0/10) address."
+regex = '''\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}\b'''
+[[rules.allowlists]]
+regexes = ['''100\.64\.0\.0''', '''100\.100\.100\.100''']
+
+[[rules]]
 id = "mac-address"
 description = "MAC address."
 regex = '''\b(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b'''
@@ -19,8 +26,34 @@ regexes = ['''(?:00:){5}00''', '''(?i)(?:aa:){5}aa''']
 
 [[rules]]
 id = "proxmox-api-token-secret"
-description = "Proxmox API token secret."
-regex = '''(?i)(?:token_secret|api_token|PVEAPIToken=[^=\s]+=)\s*=?\s*["']?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'''
+description = "Proxmox API token secret, bare or in user@realm!id=secret form."
+regex = '''(?i)(?:\w*token_secret\w*|\w*api_token\w*|PVEAPIToken)\s*[=:]\s*["']?(?:[\w.-]+@(?:pam|pve)![\w.-]+=)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'''
 secretGroup = 1
 [[rules.allowlists]]
 regexes = ['''00000000-0000-0000-0000-000000000000''']
+
+[[rules]]
+id = "proxmox-token-with-id"
+description = "Proxmox token written as user@realm!id=secret anywhere."
+regex = '''[\w.-]+@(?:pam|pve)![\w.-]+=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'''
+secretGroup = 1
+[[rules.allowlists]]
+regexes = ['''00000000-0000-0000-0000-000000000000''']
+
+[[rules]]
+id = "disk-serial"
+description = "Physical disk by-id path (contains the drive serial)."
+regex = '''/dev/disk/by-id/(?:ata|nvme|scsi|wwn|usb)-[\w.:-]+'''
+[[rules.allowlists]]
+regexes = ['''(?i)EXAMPLE''']
+
+[[rules]]
+id = "ssh-public-key"
+description = "SSH public key. Keep real keys in gitignored tfvars or host_vars."
+regex = '''ssh-(?:ed25519|rsa|ecdsa-sha2-nistp\d+) AAAA[0-9A-Za-z+/]{20,}'''
+
+[[rules]]
+id = "proxmox-vm-id"
+description = "Literal Proxmox VM ID. Pass VM IDs in through gitignored tfvars."
+regex = '''(?i)\b(?:vm_?id|vmid)\s*[=:]\s*["']?(\d{3,4})\b'''
+secretGroup = 1

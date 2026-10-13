@@ -1,10 +1,8 @@
 #!/bin/sh
 # Blocks commits whose staged changes contain secrets or private environment details.
-# Uses docs/private/gitleaks.private.toml (gitignored, extends .gitleaks.toml) when present.
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "pre-commit: gitleaks not installed (brew install gitleaks)" >&2
   exit 1
 fi
-config=.gitleaks.toml
-[ -f docs/private/gitleaks.private.toml ] && config=docs/private/gitleaks.private.toml
+config=$(sh scripts/gitleaks-config.sh)
 exec gitleaks git --pre-commit --staged --redact --no-banner --config "$config"

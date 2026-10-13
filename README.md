@@ -1,6 +1,6 @@
 # Infrastructure Repository Starter
 
-A structured starting point for documenting and managing a homelab or small infrastructure environment. Replace examples and placeholders with your actual environment details before using automation.
+Infrastructure-as-code and docs for a three-node Proxmox homelab and AWS. Committed files carry placeholders only; real environment details live in gitignored files (see Safety notes).
 
 ## Repository layout
 
@@ -19,7 +19,7 @@ A structured starting point for documenting and managing a homelab or small infr
 
 ## Safety notes
 
-- Enable the pre-commit hook once per clone: `git config core.hooksPath .githooks` (needs `gitleaks`).
+- Enable the hooks once per clone: `git config core.hooksPath .githooks` (needs `gitleaks`). They scan staged changes and commit messages; CI scans full history.
 
 - All example addresses and values are placeholders.
 - Never commit passwords, API tokens, private keys, `.tfstate` files, or generated secrets.

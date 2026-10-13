@@ -1,7 +1,9 @@
 # Secrets and local configuration
 .env
 .env.*
+*.env
 !.env.example
+!*.env.example
 *.secret
 secrets/
 
@@ -29,9 +31,13 @@ override.tf.json
 terraform.rc
 
 # Runtime data
+**/data/
+*.db
+dhcp.leases
 acme.json
 *.pem
 *.key
+id_*
 kubeconfig*
 
 # OS/editor

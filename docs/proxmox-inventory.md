@@ -1,14 +1,12 @@
 # Proxmox Inventory
 
-Record nodes, clusters, guests, and resource assignments. Avoid recording secrets here.
+The real inventory (nodes, VM IDs, addresses, MACs) is the private Masterlist in `docs/private/`, which is never committed. This public page records only the shape of the estate, by Role.
 
-| Name | Type | Management address | CPU | Memory | Storage | Purpose |
-|---|---|---|---:|---:|---|---|
-| `pve-example` | Node | `192.0.2.10` | TBD | TBD | TBD | Example only |
-
-## Virtual machines and containers
-| ID | Name | Type | OS/template | vCPU | RAM | Storage | Network/VLAN | Owner |
-|---|---|---|---|---:|---:|---|---|---|
-| TBD | TBD | VM/LXC | TBD | TBD | TBD | TBD | TBD | TBD |
-
-> `192.0.2.0/24` is a documentation-only address range. Replace all example values.
+| Role | Kind | Managed by Terraform | Notes |
+|---|---|---|---|
+| coreservices | Standard VM (Live) | import | |
+| gameservices | Standard VM (Live) | import | |
+| dns | Standard VM pair | import or rebuild | |
+| media | Standard VM | new | |
+| k3s-main | 3 Standard VMs | rebuild | one per node |
+| firewall | Appliance VM | no | fog |
